@@ -221,6 +221,8 @@ class CarInterfaceBase(ABC):
     ret = cls._get_params(ret, candidate, fingerprint, car_fw, experimental_long, docs)
     if Params().get_bool("EnforceTorqueLateral") and ret.steerControlType != car.CarParams.SteerControlType.angle:
       ret = CarInterfaceBase.sp_configure_torque_tune(candidate, ret)
+    
+    if ret.lateralTuning.which() == 'torque':
       eps_firmware = str(next((fw.fwVersion for fw in car_fw if fw.ecu == "eps"), ""))
       model = get_nn_model_path(candidate, eps_firmware)
       if model is not None:
