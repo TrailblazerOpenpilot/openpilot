@@ -45,6 +45,11 @@ class LateralPlanner:
     self.v_ego = 0.0
     self.l_lane_change_prob = 0.0
     self.r_lane_change_prob = 0.0
+    
+    max_path_offset = 0.5
+    self.lane_line_min_dist = 0.5
+    self.path_offset_bp = [-0.2, -0.03, 0.03, 0.2]
+    self.path_offset_v = [-max_path_offset, 0.0, 0.0, max_path_offset]
 
     self.debug_mode = debug
 
@@ -66,6 +71,11 @@ class LateralPlanner:
     md = sm['modelV2']
     if len(md.position.x) == TRAJECTORY_SIZE and len(md.orientation.x) == TRAJECTORY_SIZE:
       self.path_xyz = np.column_stack([md.position.x, md.position.y, md.position.z])
+      # TODO: remove this hack
+      #  Knowing that bigmodel likes to cut sharp corners, we offset the path in the lateral direction
+      #  too keep the car from cutting corners too close.
+      self.path_xyz[:, 1] += interp(md.orientationRate.z / max(v_ego_car, 1.0), self.path_offset_bp, self.path_offset_v)
+      self.path_xyz[:, 1] = np.clip(self.path_xyz[:, 1], md.laneLines[1] + self.lane_line_min_dist, md.laneLines[2] - self.lane_line_min_dist)
       self.t_idxs = np.array(md.position.t)
       self.plan_yaw = np.array(md.orientation.z)
       self.plan_yaw_rate = np.array(md.orientationRate.z)
@@ -149,3 +159,4 @@ class LateralPlanner:
     lateralPlan.laneChangeDirection = self.DH.lane_change_direction
 
     pm.send('lateralPlan', plan_send)
+
